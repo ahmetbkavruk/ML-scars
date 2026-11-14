@@ -1,19 +1,24 @@
 import numpy as np
 from scipy.sparse.linalg import expm_multiply
 
-def return_probability(H, initial_index, time_step=0.05, max_time=30):
+def time_evolution(H, initial_index, time_step=0.05, max_time=30):
     psi0 = np.zeros(H.shape[0], dtype=complex)
     psi0[initial_index] = 1
 
     number_of_steps = round(max_time / time_step)
     times = np.linspace(0, max_time, number_of_steps + 1)
 
-    # Sparse time evolution if H is sprase
     evolved_states = expm_multiply(-1j * H, psi0, start=0, stop=max_time, num=number_of_steps + 1, endpoint=True)
 
-    return_probability = np.abs(evolved_states[:, initial_index])**2
+    return times, evolved_states
 
-    return times, return_probability
+
+def return_probability(H, initial_index, time_step=0.05, max_time=30):
+    times, evolved_states = time_evolution(H, initial_index, time_step, max_time)
+
+    probabilities = np.abs(evolved_states[:, initial_index])**2
+
+    return times, probabilities
 
 
 def revival_score(return_probability, time_step=0.05):
@@ -42,6 +47,7 @@ def revival_score(return_probability, time_step=0.05):
 
     return best_score, best_period
 
+
 def state_infidelity(psi1, psi2):
     overlap = np.vdot(psi1, psi2)
 
@@ -68,5 +74,74 @@ def energy_error(H, psi, initial_energy):
 
     return np.abs(current_energy - initial_energy)
 
+
 def state_difference(psi1, psi2):
     return np.linalg.norm(psi1 - psi2)
+
+
+def staggered_density(H, initial_index, state, indices, time_step=0.05, max_time=30):
+    times, evolved_states = time_evolution(H, initial_index, time_step, max_time)
+
+    staggered_values = np.zeros(len(indices))
+
+    for position, i in enumerate(indices):
+
+        for site in range(state.L):
+            n_i = (1 - state.z(i, site)) / 2
+            sign = (-1)**site
+
+            staggered_values[position] += sign * n_i / state.L
+
+    probabilities = np.abs(evolved_states)**2
+
+    densities = probabilities @ staggered_values
+
+    return times, densities
+
+
+def entanglement_entropy(H, initial_index, state, indices, time_step=0.05, max_time=30):
+    times, evolved_states = time_evolution(H, initial_index, time_step, max_time)
+
+    left_size = state.L // 2
+    right_size = state.L - left_size
+
+    left_dimension = 2**left_size
+    right_dimension = 2**right_size
+
+    right_mask = 2**right_size - 1
+
+    left_indices = []
+    right_indices = []
+
+    for index in indices:
+
+        left_index = index >> right_size
+        right_index = index & right_mask
+
+        left_indices.append(left_index)
+        right_indices.append(right_index)
+
+    entropies = []
+
+    for psi in evolved_states:
+        coefficient_matrix = np.zeros((left_dimension, right_dimension), dtype=complex)
+
+        for position in range(len(indices)):
+            left_index = left_indices[position]
+            right_index = right_indices[position]
+
+            coefficient_matrix[left_index, right_index] = psi[position]
+
+        # Schmidt coefficients
+        singular_values = np.linalg.svd(coefficient_matrix, compute_uv=False)
+
+        eigenvalues = singular_values**2
+
+        # Avoid log(0)
+        eigenvalues = eigenvalues[eigenvalues > 1e-14]
+
+        entropy = -np.sum(eigenvalues * np.log(eigenvalues))
+
+        entropies.append(entropy)
+
+    return times, np.array(entropies)
