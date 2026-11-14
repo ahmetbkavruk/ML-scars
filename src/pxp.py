@@ -113,3 +113,32 @@ def build_deformed_pxp_hamiltonian(state, lambda2=0, lambda3=0, lambda22=0, delt
     H = csr_matrix((data, (rows, cols)), shape=(state.dim, state.dim))
 
     return H
+
+def build_constrained_basis(L):
+    basis = [0]
+
+    for site in range(L):
+        new_states = []
+
+        current_bit = 1 << site
+
+        for state in basis:
+            if site > 0:
+                previous_bit = 1 << (site - 1)
+
+                if state & previous_bit:
+                    continue
+
+            # periodic boundary conditions
+            if site == L - 1:
+                first_bit = 1
+
+                if state & first_bit:
+                    continue
+
+            new_state = state | current_bit
+            new_states.append(new_state)
+
+        basis.extend(new_states)
+
+    return basis
