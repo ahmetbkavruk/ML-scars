@@ -1,21 +1,16 @@
 import numpy as np
 from scipy.sparse.linalg import expm_multiply
 
-from .dynamics import state_difference, state_infidelity, norm_error, energy_expectation, energy_error
+from .dynamics import *
+
+
 
 def benchmark_time_evolution(H, psi0, max_time=30, time_step=0.05):
-    number_of_steps = round(max_time / time_step)
+    number_of_steps = int(np.ceil(max_time / time_step))
     times = np.linspace(0, max_time, number_of_steps + 1)
 
     # Sparse time evolution
-    sparse_states = expm_multiply(
-        -1j * H,
-        psi0,
-        start=0,
-        stop=max_time,
-        num=number_of_steps + 1,
-        endpoint=True
-    )
+    sparse_states = expm_multiply(-1j * H, psi0, start=0, stop=max_time, num=number_of_steps + 1, endpoint=True)
 
     # Dense diagonalization
     eigenvalues, eigenvectors = np.linalg.eigh(H.toarray())
@@ -49,3 +44,55 @@ def benchmark_time_evolution(H, psi0, max_time=30, time_step=0.05):
         "norm_errors": np.array(norm_errors),
         "energy_errors": np.array(energy_errors)
     }
+
+
+
+def benchmark_revivals(H, initial_index, initial_time_step=0.05, refinements=4, max_time=30, tolerance=1e-3):
+    previous_score = None
+    previous_period = None
+
+    results = []
+
+    for refinement in range(refinements):
+        time_step = initial_time_step / (2**refinement)
+
+        times, probabilities = return_probability(H, initial_index, time_step=time_step, max_time=max_time)
+
+        score, period = revival_score(probabilities,time_step=times[1] - times[0])
+
+        score_difference = None
+        period_difference = None
+
+        if previous_score is not None:
+            score_difference = abs(score - previous_score)
+
+            if period is not None and previous_period is not None:
+                period_difference = abs(period - previous_period)
+
+        print(f"Time step: {times[1] - times[0]:.8f}")
+        print(f"Revival score: {score:.8f}")
+        print(f"Optimal period: {period}")
+
+        if score_difference is not None:
+            print(f"Score difference: {score_difference:.8e}")
+
+            if period_difference is not None:
+                print(f"Period difference: {period_difference:.8e}")
+
+            if score_difference < tolerance:
+                print("Score convergence criterion satisfied.")
+
+        print()
+
+        results.append({
+            "time_step": times[1] - times[0],
+            "score": score,
+            "period": period,
+            "score_difference": score_difference,
+            "period_difference": period_difference
+        })
+
+        previous_score = score
+        previous_period = period
+
+    return results

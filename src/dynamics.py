@@ -5,7 +5,7 @@ def time_evolution(H, initial_index, time_step=0.05, max_time=30):
     psi0 = np.zeros(H.shape[0], dtype=complex)
     psi0[initial_index] = 1
 
-    number_of_steps = round(max_time / time_step)
+    number_of_steps = int(np.ceil(max_time / time_step))
     times = np.linspace(0, max_time, number_of_steps + 1)
 
     evolved_states = expm_multiply(-1j * H, psi0, start=0, stop=max_time, num=number_of_steps + 1, endpoint=True)
@@ -25,8 +25,8 @@ def revival_score(return_probability, time_step=0.05):
     best_score = 0
     best_period = None
 
-    minimum_period_index = round(3 / time_step)
-    maximum_period_index = round(7 / time_step)
+    minimum_period_index = int(np.ceil(3 / time_step))
+    maximum_period_index = int(np.floor(7 / time_step))
 
     for period_index in range(minimum_period_index, maximum_period_index + 1):
         # Departure condition
