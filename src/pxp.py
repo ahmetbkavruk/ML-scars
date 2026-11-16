@@ -142,3 +142,22 @@ def build_constrained_basis(L):
         basis.extend(new_states)
 
     return basis
+
+
+def build_lambda2_components(state, indices):
+    base_full = build_deformed_pxp_hamiltonian(state, lambda2=0)
+
+    unit_full = build_deformed_pxp_hamiltonian(state, lambda2=1)
+
+    base_hamiltonian = base_full[indices, :][:, indices]
+    unit_hamiltonian = unit_full[indices, :][:, indices]
+
+    deformation_hamiltonian = unit_hamiltonian - base_hamiltonian
+
+    return base_hamiltonian, deformation_hamiltonian
+
+
+def assemble_lambda2_hamiltonian(base_hamiltonian, deformation_hamiltonian, lambda2):
+    H = base_hamiltonian + lambda2 * deformation_hamiltonian
+
+    return H

@@ -1,8 +1,28 @@
 import numpy as np
 from scipy.sparse.linalg import expm_multiply
 
-from .dynamics import *
+from .dynamics import time_evolution
+from .observables import (return_probability, 
+    state_infidelity,
+    energy_expectation,
+)
+from .scoring import revival_score
 
+
+def norm_error(psi):
+    norm_squared = np.vdot(psi, psi).real
+
+    return np.abs(norm_squared - 1)
+
+
+def energy_error(H, psi, initial_energy):
+    current_energy = energy_expectation(H, psi)
+
+    return np.abs(current_energy - initial_energy)
+
+
+def state_difference(psi1, psi2):
+    return np.linalg.norm(psi1 - psi2)
 
 
 def benchmark_time_evolution(H, psi0, max_time=30, time_step=0.05):
@@ -56,7 +76,9 @@ def benchmark_revivals(H, initial_index, initial_time_step=0.05, refinements=4, 
     for refinement in range(refinements):
         time_step = initial_time_step / (2**refinement)
 
-        times, probabilities = return_probability(H, initial_index, time_step=time_step, max_time=max_time)
+        times, evolved_states = time_evolution(H, initial_index, time_step=time_step, max_time=max_time)
+
+        probabilities = return_probability(evolved_states, initial_index)
 
         score, period = revival_score(probabilities,time_step=times[1] - times[0])
 
