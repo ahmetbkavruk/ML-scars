@@ -80,7 +80,7 @@ def benchmark_revivals(H, initial_index, initial_time_step=0.05, refinements=4, 
 
         probabilities = return_probability(evolved_states, initial_index)
 
-        score, period = revival_score(probabilities,time_step=times[1] - times[0])
+        score, period = revival_score(probabilities, time_step=times[1] - times[0])
 
         score_difference = None
         period_difference = None

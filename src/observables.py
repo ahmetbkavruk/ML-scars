@@ -1,12 +1,9 @@
 import numpy as np
-from .dynamics import time_evolution
 
-def return_probability(H, initial_index, time_step=0.05, max_time=30):
-    times, evolved_states = time_evolution(H, initial_index, time_step, max_time)
-
+def return_probability(evolved_states, initial_index):
     probabilities = np.abs(evolved_states[:, initial_index])**2
 
-    return times, probabilities
+    return probabilities
 
 
 def revival_score(return_probability, time_step=0.05):
@@ -51,9 +48,7 @@ def energy_expectation(H, psi):
     return np.vdot(psi, H @ psi).real
 
 
-def staggered_density(H, initial_index, state, indices, time_step=0.05, max_time=30):
-    times, evolved_states = time_evolution(H, initial_index, time_step, max_time)
-
+def staggered_density(evolved_states, state, indices):
     staggered_values = np.zeros(len(indices))
 
     for position, i in enumerate(indices):
@@ -68,12 +63,10 @@ def staggered_density(H, initial_index, state, indices, time_step=0.05, max_time
 
     densities = probabilities @ staggered_values
 
-    return times, densities
+    return densities
 
 
-def entanglement_entropy(H, initial_index, state, indices, time_step=0.05, max_time=30):
-    times, evolved_states = time_evolution(H, initial_index, time_step, max_time)
-
+def entanglement_entropy(evolved_states, state, indices):
     left_size = state.L // 2
     right_size = state.L - left_size
 
@@ -116,4 +109,4 @@ def entanglement_entropy(H, initial_index, state, indices, time_step=0.05, max_t
 
         entropies.append(entropy)
 
-    return times, np.array(entropies)
+    return np.array(entropies)
